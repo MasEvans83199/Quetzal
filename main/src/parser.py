@@ -1,7 +1,9 @@
+from ast import FunctionDeclaration, ForLoopNode, WhileLoopNode, DoWhileNode
+
 class Parser:
     def __init__(self, tokens):
         # Initialize the parser with a list of tokens
-        self.tokens = tokens
+        self.tokens = iter(tokens)
         self.current_token = None
         self.next_token()  # Initialize the first token
 
@@ -39,6 +41,59 @@ class Parser:
             statement = self.parse_statement()  # Parse a single statement
             statements.append(statement)  # Add the parsed statement to the list
         return statements  # Return the list of statements
+    
+    def parse_for_loop(self):
+        # Expect the 'for' keyword
+        self.expect('FOR')
+        variable = self.expect('IDENTIFIER').value  # The loop variable
+        self.expect('FROM')
+        start = self.parse_expression()  # Starting value
+        self.expect('TO')
+        end = self.parse_expression()  # Ending value
+
+        # Now parse the body of the loop
+        body = []
+        while self.current_token.type != 'STOP':
+            body.append(self.parse_statement())
+
+        self.expect('STOP')  # End of the loop body
+        return ForLoopNode(variable, start, end, body)
+    
+    def parse_comparison_operator(self):
+        if self.current_token.type in ['LESS', 'GREATER', 'LESS_EQUAL', 'GREATER_EQUAL', 'EQUAL', 'NOT_EQUAL']:
+            operator = self.current_token.type
+            self.next_token()  # Move past the operator
+            return operator
+        else:
+            raise SyntaxError(f"Expected a comparison operator, found '{self.current_token.type}'")
+
+    def parse_while_loop(self):
+        self.expect('WHILE')  # Assume you start with the 'WHILE' keyword
+        variable = self.expect('IDENTIFIER').value  # Get the loop variable
+
+        operator = self.parse_comparison_operator()  # Parse the comparison operator
+
+        comparison_value = self.parse_expression()  # Parse the value to compare against
+
+        # Now parse the body of the loop
+        body = []
+        while self.current_token.type != 'STOP':
+            body.append(self.parse_statement())
+
+        self.expect('STOP')  # End of the loop body
+        return WhileLoopNode(variable, operator, comparison_value, body)
+    
+    def parse_do_while(self):
+        """Parse a do-while loop statement."""
+        self.expect('DO')
+        self.expect('OPEN_BRACE')
+        body = self.parse_statements()  # Method that parses multiple statements within braces
+        self.expect('CLOSE_BRACE')
+        self.expect('WHILE')
+        condition = self.parse_expression()  # Method that parses the condition expression
+
+        return DoWhileNode(condition, body)
+
 
     def expect(self, type):
         # Ensure the current token matches the expected type
@@ -46,4 +101,5 @@ class Parser:
             token = self.current_token
             self.next_token()  # Move past the token after matching
             return token
-        raise SyntaxError(f"Expected {type}, but got {self.current_token.type}")
+        else:
+            raise SyntaxError(f"Expected {type}, but got {self.current_token.type}")
