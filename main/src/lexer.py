@@ -2,63 +2,82 @@ import re
 
 class Lexer:
     def __init__(self, source_code):
-        self.tokens = []  # List of tokens
-        self.source_code = source_code.lower()  # Convert source to lowercase for case insensitivity
+        self.tokens = []
+        self.source_code = source_code.lower()
 
     def tokenize(self):
-        tokens_re = {
-            'DEC': r'\bdec\b', # Matches 'dec' keyword for variable declarations
-            'FUN': r'\bfun\b',  # Matches the 'fun' keyword for function definitions
-            'IDENTIFIER': r'\b[a-zA-Z_][a-zA-Z0-9_]*\b',  # Matches identifiers
-            'COLON': r':',  # Matches the colon symbol used in variable typing and assignment
-            'INTEGER': r'\binteger\b',  # Matches the 'integer' type keyword
-            'STRING': r'\bstring\b',  # Matches the 'string' type keyword
-            'DOUBLE': r'\bdouble\b',  # Matches the 'double' type keyword
-            'CHARACTER': r'\bcharacter\b',  # Matches the 'character' type keyword
-            'NUMBER': r'\b\d+\b',  # Matches integers
-            'FLOAT': r'\b\d+\.\d+\b',  # Matches floating-point numbers
-            'PLUS': r'\+',  # Matches the plus operator
-            'MINUS': r'-',  # Matches the minus operator
-            'DIVIDE': r'/',  # Matches the division operator
-            'OUTPUT': r'->',  # Matches the output operator '->'
-            'STOP': r'\bstop\b',  # Matches the 'stop' keyword
-            'COMMA': r',',  # Matches commas for separating parameters
-            'OPEN_PAREN': r'\(',  # Matches open parentheses
-            'CLOSE_PAREN': r'\)',  # Matches close parentheses
-            'OPEN_BRACE': r'\{', # Matches opening brace
-            'CLOSE_BRACE': r'\}', # Matches closing brace
-            'EQUAL': r':?', # Matches comparisons
-            'GREATER': r':>', # Matches greater-than operator
-            'LESS': r':<', # Matches less-than operator
-            'GREATER_EQUAL': r':?>', # Matches greater-than equal to operator
-            'LESS_EQUAL': r':?<', # Matches less-than equal to operator
-            'NOT_EQUAL': r':!', # Matches not equal to operator
-            'AND': r':&', # Matches operator 'and'
-            'OR': r':|', # Matches operator 'or'
-            'THEN': r'::>', # Matches operator 'then'
-            'INCREMENT': r'\+\+', # Matches increment operator
-            'DECREMENT': r'--', # Matches decrement operator
-            'PLUS_EQUAL': r':\+', # Matches plus-equal operator
-            'MINUS_EQUAL': r':-', # Matches minus-equal operator
-            'FOR': r'\bfor\b', # Matches 'for' loop keyword
-            'WHILE': r'\bwhile\b', # Matches 'while' loop keyword
-            'FROM': r'\bfrom\b', # Matches 'from' keyword
-            'TO': r'\bto\b', # Matches 'to' keyword
-            'ENQUEUE': r'\benqueue\b', # Matches 'enqueue' keyword
-            'DEQUEUE': r'\bdequeue\b', # Matches 'dequeue' keyword
-            'POP': r'\bpop\b', # Matches 'pop' keyword
-            'PUSH': r'\bpush\b', # Matches 'push' keyword
-            'PEEK': r'\bpeek\b', # Matches 'peek' keyword
-            'POP_BACK': r'\bpop_back\b',  # Matches 'pop_back' keyword
-            'PUSH_BACK': r'\bpush_back\b',  # Matches 'push_back' keyword
-            'IF': r'\bif\b', # Matches 'if' keyword
-            'ELSE_IF': r'\belif\b', # Matches 'elif' keyword
-            'DO': r'\bdo\b', # Matches 'do' keyword
+        patterns = {
+            'TYPE_STRING': r'\bstring\b',
+            'TYPE_INTEGER': r'\binteger\b',
+            'TYPE_DOUBLE': r'\bdouble\b',
+            'TYPE_CHARACTER': r'\bcharacter\b',
+            'STRING_LITERAL': r'"[^"]*"',
+            'FLOAT_LITERAL': r'\b\d+\.\d+\b',
+            'NUMBER': r'\b\d+\b',
+            'CHARACTER_LITERAL': r"'.'",
+            'FUN': r'\bfun\b',
+            'IDENTIFIER': r'\b[a-zA-Z_][a-zA-Z0-9_]*\b',  # This will not match any reserved keyword due to above explicit definitions
+            'COLON': r':',
+            'OUTPUT': r'->',
+            # Other tokens...
+            'PLUS': r'\+',
+            'MINUS': r'-',
+            'DIVIDE': r'/',
+            'STOP': r'\bstop\b',
+            'COMMA': r',',
+            'OPEN_PAREN': r'\(',
+            'CLOSE_PAREN': r'\)',
+            'OPEN_BRACE': r'\{',
+            'CLOSE_BRACE': r'\}',
+            'EQUAL': r':=',
+            'GREATER': r':>',
+            'LESS': r':<',
+            'GREATER_EQUAL': r':?>',
+            'LESS_EQUAL': r':?<',
+            'NOT_EQUAL': r':!',
+            'AND': r':&',
+            'OR': r':\|',
+            'THEN': r'::>',
+            'INCREMENT': r'\+\+',
+            'DECREMENT': r'--',
+            'PLUS_EQUAL': r':\+',
+            'MINUS_EQUAL': r':-',
+            'FOR': r'\bfor\b',
+            'WHILE': r'\bwhile\b',
+            'FROM': r'\bfrom\b',
+            'TO': r'\bto\b',
+            'ENQUEUE': r'\benqueue\b',
+            'DEQUEUE': r'\bdequeue\b',
+            'POP': r'\bpop\b',
+            'PUSH': r'\bpush\b',
+            'PEEK': r'\bpeek\b',
+            'POP_BACK': r'\bpop_back\b',
+            'PUSH_BACK': r'\bpush_back\b',
+            'IF': r'\bif\b',
+            'ELSE_IF': r'\belif\b',
+            'DO': r'\bdo\b',
         }
 
+        # We go line by line to avoid any confusion with multi-line inputs
         for line in self.source_code.split('\n'):
-            for token_type, reg_ex in tokens_re.items():
-                for match in re.finditer(reg_ex, line):
-                    self.tokens.append((token_type, match.group()))
-
+            position = 0
+            while position < len(line):
+                match = None
+                for token_type, pattern in patterns.items():
+                    regex = re.compile(pattern)
+                    match = regex.match(line, position)
+                    if match:
+                        self.tokens.append((token_type, match.group()))
+                        print(f"Generated Token: {token_type}, Value: {match.group()}")
+                        position = match.end()  # Move position past the end of the matched token
+                        break
+                if not match:
+                    position += 1  # If no token matched, increment to avoid infinite loop
         return self.tokens
+
+# Example usage
+if __name__ == "__main__":
+    code = 'string str : "Hello world"'
+    lexer = Lexer(code)
+    tokens = lexer.tokenize()
+    print(tokens)  # Output tokens for review

@@ -1,34 +1,63 @@
-# gui.py
-import tkinter as tk
-from tkinter import scrolledtext
-from interpreter import run  # Importing the run function
+from tkinter import Tk, Text, Scrollbar, Button, Frame, messagebox
+from tkinter.scrolledtext import ScrolledText
+from interpreter import run
 
-class QuetzalGUI:
-    def __init__(self, master):
-        self.master = master
-        master.title("Quetzal Programming Environment")
+class GUI:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Quetzal Interpreter")
+        self.root.geometry("600x400")
 
-        # Text editor for code input
-        self.text_input = scrolledtext.ScrolledText(master, width=80, height=20)
-        self.text_input.pack()
+        # Frame for input area
+        input_frame = Frame(self.root)
+        input_frame.pack(side='top', fill='both', expand=True)
 
-        # Button to execute the code
-        self.run_button = tk.Button(master, text="Run", command=self.execute_code)
-        self.run_button.pack()
+        # Text area for input
+        self.input_area = ScrolledText(input_frame, wrap='word')
+        self.input_area.pack(side='left', fill='both', expand=True)
 
-        # Output area for displaying results or errors
-        self.output_area = scrolledtext.ScrolledText(master, width=80, height=20, state='disabled')
-        self.output_area.pack()
+        # Scrollbar for input area
+        scrollbar_input = Scrollbar(input_frame, command=self.input_area.yview)
+        scrollbar_input.pack(side='right', fill='y')
+        self.input_area.config(yscrollcommand=scrollbar_input.set)
+
+        # Frame for output area
+        output_frame = Frame(self.root)
+        output_frame.pack(side='bottom', fill='both', expand=True)
+
+        # Text area for output
+        self.output_area = Text(output_frame, wrap='word', state='disabled')
+        self.output_area.pack(side='left', fill='both', expand=True)
+
+        # Scrollbar for output area
+        scrollbar_output = Scrollbar(output_frame, command=self.output_area.yview)
+        scrollbar_output.pack(side='right', fill='y')
+        self.output_area.config(yscrollcommand=scrollbar_output.set)
+
+        # Run code button
+        run_button = Button(self.root, text="Run Code", command=self.execute_code)
+        run_button.pack()
 
     def execute_code(self):
-        code = self.text_input.get('1.0', tk.END)
-        output = run(code)  # Using the interpreter's run function
+        # Clear previous output
         self.output_area.config(state='normal')
-        self.output_area.delete('1.0', tk.END)
-        self.output_area.insert(tk.END, output)
+        self.output_area.delete('1.0', 'end')
+
+        # Retrieve code from the input area
+        code = self.input_area.get('1.0', 'end')
+
+        # Run the interpreter with the retrieved code
+        try:
+            output = run(code)
+            # Display output in the output area
+            self.output_area.insert('end', output)
+        except Exception as e:
+            messagebox.showerror("Error", str(e))
+
+        # Disable editing in output area
         self.output_area.config(state='disabled')
 
 if __name__ == "__main__":
-    root = tk.Tk()
-    app = QuetzalGUI(root)
+    root = Tk()
+    gui = GUI(root)
     root.mainloop()
