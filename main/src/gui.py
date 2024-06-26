@@ -1,6 +1,7 @@
 from tkinter import Tk, Text, Scrollbar, Button, Frame, messagebox
 from tkinter.scrolledtext import ScrolledText
 from interpreter import run
+import threading
 
 class GUI:
     def __init__(self, root):
@@ -39,23 +40,26 @@ class GUI:
         run_button.pack()
 
     def execute_code(self):
-        # Clear previous output
-        self.output_area.config(state='normal')
-        self.output_area.delete('1.0', 'end')
-
-        # Retrieve code from the input area
+        print("Executing code...")
         code = self.input_area.get('1.0', 'end')
+        threading.Thread(target=self.run_interpreter, args=(code,), daemon=True).start()
 
-        # Run the interpreter with the retrieved code
+    def run_interpreter(self, code):
+        print(f"Running interpreter with code: {code}")
         try:
             output = run(code)
-            # Display output in the output area
-            self.output_area.insert('end', output)
+            print(f"Interpreter output: {output}")
+            self.output_area.after(0, self.update_output_area, output)
         except Exception as e:
             messagebox.showerror("Error", str(e))
+            self.output_area.after(0, self.update_output_area, "Error occurred!")
 
-        # Disable editing in output area
-        self.output_area.config(state='disabled')
+    def update_output_area(self, output):
+        """ Update the output area with provided text """
+        self.output_area.config(state='normal')  # Enable the text widget
+        self.output_area.insert('end', output + '\n')  # Insert output at the end
+        self.output_area.config(state='disabled')  # Disable the text widget to prevent editing
+
 
 if __name__ == "__main__":
     root = Tk()

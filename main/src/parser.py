@@ -11,8 +11,12 @@ from ast import (
     FunctionCallNode,
     StringLiteralNode,
     CharacterNode,
+    ExpressionNode,
     OutputNode,
-    VariableAccessNode
+    VariableAccessNode,
+    IncrementNode,
+    DecrementNode,
+    StopNode
 )
 
 class SyntaxError(Exception):
@@ -42,10 +46,14 @@ class Parser:
     def parse(self):
         ast = []
         while self.current_token is not None:
-            if self.current_token[0] == 'OUTPUT':
-                ast.append(self.parse_output())
+            if self.current_token[0] == 'IF':
+                ast.append(self.parse_if_statement())
+            elif self.current_token[0] == 'FOR':
+                ast.append(self.parse_for_loop())
             elif self.current_token[0].startswith('TYPE_'):
                 ast.append(self.parse_variable_declaration())
+            elif self.current_token[0] == 'OUTPUT':
+                ast.append(self.parse_output())
             elif self.current_token[0] == 'IDENTIFIER' and self.peek() == 'COLON':
                 ast.append(self.parse_assignment())
             elif self.current_token[0] == 'IDENTIFIER':
@@ -55,34 +63,22 @@ class Parser:
         return ast
 
     def parse_variable_declaration(self):
-        type_token = self.expect(self.current_token[0])[0]  # Get the type token
+        type_token = self.expect(self.current_token[0])[0]
         identifier = self.expect('IDENTIFIER')[1]
         self.expect('COLON')
-        
-        # Depending on the type token, expect the correct literal type
-        if 'STRING' in type_token:
-            string_value = self.expect('STRING_LITERAL')[1]
-            value = StringLiteralNode(string_value)
-        elif 'INTEGER' in type_token:
-            number_value = int(self.expect('NUMBER')[1])
-            value = NumberNode(number_value)
-        elif 'DOUBLE' in type_token:
-            number_value = float(self.expect('FLOAT_LITERAL')[1])
-            value = NumberNode(number_value)
-        elif 'CHARACTER' in type_token:
-            char_value = self.expect('CHARACTER_LITERAL')[1]
-            value = CharacterNode(char_value) 
-        else:
-            print(f"Unsupported type {type_token}")  # Debug print
-            raise SyntaxError("Unsupported type for variable declaration.")
-        
-        return VariableDeclarationNode(type_token[len('TYPE_'):].lower(), identifier, value)
-
+        expression = self.parse_expression()
+        return VariableDeclarationNode(type_token[len('TYPE_'):].lower(), identifier, expression)
 
     def parse_output(self):
         self.expect('OUTPUT')
-        identifier = self.expect('IDENTIFIER')[1]
-        return OutputNode(VariableAccessNode(identifier))
+        if self.current_token[0] == 'IDENTIFIER':
+            identifier = self.expect('IDENTIFIER')[1]
+            return OutputNode(VariableAccessNode(identifier))
+        elif self.current_token[0] == 'STRING_LITERAL':
+            string = self.expect('STRING_LITERAL')[1]
+            return OutputNode(StringLiteralNode(string))
+        else:
+            raise SyntaxError(f"Unexpected token {self.current_token[0]} in output")
 
     def parse_variable_access(self):
         identifier = self.expect('IDENTIFIER')[1]
@@ -94,15 +90,103 @@ class Parser:
         value = self.parse_expression()
         return AssignNode(identifier, value)
 
+    def parse_if_statement(self):
+        self.expect('IF')
+        condition = self.parse_expression()
+        self.expect('THEN')
+        then_block = self.parse_block()
+
+        elif_blocks = []
+        while self.current_token and self.current_token[0] == 'ELSE_IF':
+            self.expect('ELSE_IF')
+            elif_condition = self.parse_expression()
+            self.expect('THEN')
+            elif_block = self.parse_block()
+            elif_blocks.append((elif_condition, elif_block))
+
+        else_block = None
+        if self.current_token and self.current_token[0] == 'ELSE':
+            self.expect('ELSE')
+            self.expect('THEN')
+            else_block = self.parse_block()
+
+        return IfNode(condition, then_block, elif_blocks, else_block)
+
+    def parse_for_loop(self):
+        self.expect('FOR')
+        if self.current_token[0].startswith('TYPE_'):
+            declaration = self.parse_variable_declaration()
+            identifier = declaration.name
+        else:
+            identifier = self.expect('IDENTIFIER')[1]
+        self.expect('TO')
+        end_value = self.parse_expression()
+        body = self.parse_block()
+        if isinstance(declaration, VariableDeclarationNode):
+            return [declaration, ForLoopNode(identifier, end_value, body)]
+        return ForLoopNode(identifier, end_value, body)
+    
+    def parse_while_loop(self):
+        self.expect('WHILE')
+        condition = self.parse_expression()
+        body = self.parse_block()
+        return WhileLoopNode(condition, body)
+
+    def parse_block(self):
+        block = []
+        self.expect('INDENT')
+        while self.current_token and self.current_token[0] != 'DEDENT':
+            if self.current_token[0] == 'INCREMENT':
+                self.next_token()  # Consume the INCREMENT token
+                identifier = self.expect('IDENTIFIER')[1]
+                block.append(IncrementNode(identifier))
+            elif self.current_token[0] == 'DECREMENT':
+                self.next_token()  # Consume the DECREMENT token
+                identifier = self.expect('IDENTIFIER')[1]
+                block.append(DecrementNode(identifier))
+            elif self.current_token[0] == 'OUTPUT':
+                block.append(self.parse_output())
+            elif self.current_token[0].startswith('TYPE_'):
+                block.append(self.parse_variable_declaration())
+            else:
+                block.append(self.parse_expression())
+        self.expect('DEDENT')
+        return block
+
+
+
     def parse_expression(self):
-        # Simplified expression parsing for demonstration
-        token = self.expect('NUMBER')
-        return NumberNode(token[1])
+        expr = self.parse_primary_expression()
+
+        while self.current_token and self.current_token[0] in ['PLUS', 'MINUS', 'DIVIDE', 'MULTIPLY', 'GREATER', 'LESS', 'GREATER_EQUAL', 'LESS_EQUAL', 'EQUAL']:
+            operator = self.current_token[0]
+            self.next_token()
+            right = self.parse_primary_expression()
+            expr = BinaryOperatorNode(expr, operator, right)
+
+        return expr
+
+    def parse_primary_expression(self):
+        if self.current_token[0] == 'IDENTIFIER':
+            identifier = self.expect('IDENTIFIER')[1]
+            if self.current_token and self.current_token[0] == 'INCREMENT':
+                self.next_token()  # Consume the INCREMENT token
+                return IncrementNode(identifier)
+            elif self.current_token and self.current_token[0] == 'DECREMENT':
+                self.next_token()  # Consume the DECREMENT token
+                return DecrementNode(identifier)
+            return VariableAccessNode(identifier)
+        elif self.current_token[0] == 'NUMBER':
+            number = int(self.expect('NUMBER')[1])
+            return NumberNode(number)
+        else:
+            raise SyntaxError(f"Unexpected token type {self.current_token[0]}")
+
 
     def peek(self):
         save_point = self.tokens
         next_token = next(save_point, None)
-        self.tokens = save_point  # Restore the iterator's state
+        self.tokens = save_point
         return next_token[0] if next_token else None
 
-# Example usage
+

@@ -29,12 +29,10 @@ class DoWhileNode(Node):
         self.condition = condition
         self.body = body
 
-class ForLoopNode(Node):
-    """Represents a 'for' loop."""
-    def __init__(self, variable, start, end, body):
-        self.variable = variable
-        self.start = start
-        self.end = end
+class ForLoopNode:
+    def __init__(self, identifier, end_value, body):
+        self.identifier = identifier
+        self.end_value = end_value
         self.body = body
 
 class BinaryOperatorNode(Node):
@@ -77,6 +75,23 @@ class CharacterNode(Node):
     def __init__(self, value):
         # Ensure the character is stored without surrounding quotes
         self.value = value.strip("'")
+        
+class ExpressionNode(Node):
+    def __init__(self, left, operator=None, right=None):
+        self.left = left
+        self.operator = operator
+        self.right = right
+        
+class IncrementNode(Node):
+    def __init__(self, identifier):
+        self.identifier = identifier
+        
+class DecrementNode(Node):
+    def __init__(self, identifier):
+        self.identifier = identifier
+
+class StopNode(Node):
+    pass
 
 class OutputNode(Node):
     def __init__(self, value):

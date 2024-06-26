@@ -1,4 +1,3 @@
-# interpreter.py
 import math_utils
 import string_utils
 import file_utils
@@ -17,7 +16,8 @@ from ast import (
     FunctionCallNode,
     OutputNode,
     VariableAccessNode,
-    StringLiteralNode
+    IncrementNode,
+    StopNode
 )
 
 global_namespace = {
@@ -45,20 +45,69 @@ class Interpreter:
         return '\n'.join(filter(None, results))
 
     def visit(self, node):
+        print(f"Visiting: {type(node).__name__}")
         method_name = 'visit_' + type(node).__name__
         visitor = getattr(self, method_name, self.no_visit_method)
         return visitor(node)
 
+    def visit_ForLoopNode(self, node):
+        start_value = self.environment[node.identifier]
+        end_value = self.visit(node.end_value)
+        results = []
+        for i in range(start_value, end_value):
+            self.environment[node.identifier] = i
+            for stmt in node.body:
+                result = self.visit(stmt)
+                if result is not None:
+                    results.append(result)
+        return '\n'.join(results)
+    
+    def visit_WhileLoopNode(self, node):
+        while self.visit(node.condition):
+            for stmt in node.body:
+                self.visit(stmt)
+
+    def visit_IncrementNode(self, node):
+        self.environment[node.identifier] += 1
+
     def visit_IfNode(self, node):
         condition_value = self.visit(node.condition)
         if condition_value:
-            return self.visit_list(node.then_block)
-        return None
+            for stmt in node.then_block:
+                self.visit(stmt)
+        elif node.elif_blocks:
+            for (cond, block) in node.elif_blocks:
+                if self.visit(cond):
+                    for stmt in block:
+                        self.visit(stmt)
+                    break
+        if not condition_value and node.else_block:
+            for stmt in node.else_block:
+                self.visit(stmt)
 
     def visit_BinaryOperatorNode(self, node):
-        left = self.visit(node.left)
-        right = self.visit(node.right)
-        return eval(f"{left} {node.operator} {right}")
+        left_val = self.visit(node.left)
+        right_val = self.visit(node.right)
+        if node.operator == 'PLUS':
+            return left_val + right_val
+        elif node.operator == 'MINUS':
+            return left_val - right_val
+        elif node.operator == 'DIVIDE':
+            return left_val / right_val
+        elif node.operator == 'MULTIPLY':
+            return left_val * right_val
+        elif node.operator == 'EQUAL':
+            return left_val == right_val
+        elif node.operator == 'GREATER':
+            return left_val > right_val
+        elif node.operator == 'LESS':
+            return left_val < right_val
+        elif node.operator == 'GREATER_EQUAL':
+            return left_val >= right_val
+        elif node.operator == 'LESS_EQUAL':
+            return left_val <= right_val
+        else:
+            raise Exception(f"Unsupported operator {node.operator}")
 
     def visit_NumberNode(self, node):
         return node.value
@@ -70,11 +119,14 @@ class Interpreter:
         return node.value
 
     def visit_VariableDeclarationNode(self, node):
-        self.environment[node.name] = self.visit(node.expression)
-        return f"Variable '{node.name}' set to {self.environment[node.name]}"
+        evaluated_expression = self.visit(node.expression)
+        self.environment[node.name] = evaluated_expression
+        print(f"Declared: {node.name} = {evaluated_expression}")
+        return f"Variable '{node.name}' set to {evaluated_expression}"
 
     def visit_OutputNode(self, node):
         output_value = self.visit(node.value)
+        print(f"Output: {output_value}")
         return str(output_value)
 
     def visit_AssignNode(self, node):
@@ -82,8 +134,10 @@ class Interpreter:
         return f"Variable {node.name} assigned value {self.environment[node.name]}"
 
     def visit_VariableAccessNode(self, node):
-        value = self.environment.get(node.identifier, "Undefined variable")
-        return f"{node.identifier} = {value}"
+        if node.identifier in self.environment:
+            return self.environment[node.identifier]
+        else:
+            raise Exception(f"Undefined variable {node.identifier}")
 
     def visit_FunctionCallNode(self, node):
         func = global_namespace.get(node.function_name)
@@ -105,10 +159,22 @@ def run(code):
     parser = Parser(tokens)
     ast = parser.parse()
     interpreter = Interpreter(parser)
-    return interpreter.interpret(ast)
+    try:
+        result = interpreter.interpret(ast)
+        return result
+    except Exception as e:
+        print(f"Error during interpretation: {e}")
+        return f'Error: {str(e)}'
 
-if __name__ == '__main__':
-    code = 'string str : "Hello world"\n-> str'
+# Example usage
+if __name__ == "__main__":
+    code = '''integer int : 0
+integer limit : 5
+while int < limit
+    -> int
+    int++
+stop
+'''
     lexer = Lexer(code)
     tokens = lexer.tokenize()
     parser = Parser(tokens)

@@ -3,7 +3,8 @@ import re
 class Lexer:
     def __init__(self, source_code):
         self.tokens = []
-        self.source_code = source_code.lower()
+        self.source_code = source_code
+        self.indent_stack = [0]  # Start with an initial indent level of 0
 
     def tokenize(self):
         patterns = {
@@ -16,14 +17,34 @@ class Lexer:
             'NUMBER': r'\b\d+\b',
             'CHARACTER_LITERAL': r"'.'",
             'FUN': r'\bfun\b',
-            'IDENTIFIER': r'\b[a-zA-Z_][a-zA-Z0-9_]*\b',  # This will not match any reserved keyword due to above explicit definitions
+            'IF': r'\bif\b',
+            'ELSE_IF': r'\belse_if\b',
+            'ELSE': r'\belse\b',
+            'THEN': r'\bthen\b',
+            'STOP': r'\bstop\b',
+            'FOR': r'\bfor\b',
+            'WHILE': r'\bwhile\b',
+            'FROM': r'\bfrom\b',
+            'TO': r'\bto\b',
+            'ENQUEUE': r'\benqueue\b',
+            'DEQUEUE': r'\bdequeue\b',
+            'POP': r'\bpop\b',
+            'PUSH': r'\bpush\b',
+            'PEEK': r'\bpeek\b',
+            'POP_BACK': r'\bpop_back\b',
+            'PUSH_BACK': r'\bpush_back\b',
+            'DO': r'\bdo\b',
+            'IDENTIFIER': r'\b[a-zA-Z_][a-zA-Z0-9_]*\b',
+            'INCREMENT': r'\+\+',
+            'DECREMENT': r'--',
+            'PLUS_EQUAL': r':\+',
+            'MINUS_EQUAL': r':-',
             'COLON': r':',
             'OUTPUT': r'->',
-            # Other tokens...
             'PLUS': r'\+',
             'MINUS': r'-',
             'DIVIDE': r'/',
-            'STOP': r'\bstop\b',
+            'MULTIPLY': r'\*',
             'COMMA': r',',
             'OPEN_PAREN': r'\(',
             'CLOSE_PAREN': r'\)',
@@ -37,30 +58,21 @@ class Lexer:
             'NOT_EQUAL': r':!',
             'AND': r':&',
             'OR': r':\|',
-            'THEN': r'::>',
-            'INCREMENT': r'\+\+',
-            'DECREMENT': r'--',
-            'PLUS_EQUAL': r':\+',
-            'MINUS_EQUAL': r':-',
-            'FOR': r'\bfor\b',
-            'WHILE': r'\bwhile\b',
-            'FROM': r'\bfrom\b',
-            'TO': r'\bto\b',
-            'ENQUEUE': r'\benqueue\b',
-            'DEQUEUE': r'\bdequeue\b',
-            'POP': r'\bpop\b',
-            'PUSH': r'\bpush\b',
-            'PEEK': r'\bpeek\b',
-            'POP_BACK': r'\bpop_back\b',
-            'PUSH_BACK': r'\bpush_back\b',
-            'IF': r'\bif\b',
-            'ELSE_IF': r'\belif\b',
-            'DO': r'\bdo\b',
         }
 
-        # We go line by line to avoid any confusion with multi-line inputs
         for line in self.source_code.split('\n'):
             position = 0
+            current_indent = len(line) - len(line.lstrip())
+            previous_indent = self.indent_stack[-1]
+
+            if current_indent > previous_indent:
+                self.indent_stack.append(current_indent)
+                self.tokens.append(('INDENT', ' ' * current_indent))
+            while current_indent < previous_indent:
+                self.indent_stack.pop()
+                previous_indent = self.indent_stack[-1]
+                self.tokens.append(('DEDENT', ''))
+
             while position < len(line):
                 match = None
                 for token_type, pattern in patterns.items():
@@ -68,16 +80,22 @@ class Lexer:
                     match = regex.match(line, position)
                     if match:
                         self.tokens.append((token_type, match.group()))
-                        print(f"Generated Token: {token_type}, Value: {match.group()}")
-                        position = match.end()  # Move position past the end of the matched token
+                        print(f"Generated Token: {token_type}, Value: '{match.group()}'")
+                        position = match.end()
                         break
                 if not match:
-                    position += 1  # If no token matched, increment to avoid infinite loop
+                    print(f"No match at position {position} in line: {line}")
+                    position += 1
         return self.tokens
 
 # Example usage
 if __name__ == "__main__":
-    code = 'string str : "Hello world"'
+    code = '''integer int : 0
+integer count : 4
+for int to count
+    -> int
+    ++int
+stop'''
     lexer = Lexer(code)
     tokens = lexer.tokenize()
     print(tokens)  # Output tokens for review
