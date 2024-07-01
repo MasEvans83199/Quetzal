@@ -1,3 +1,4 @@
+from lexer import Lexer
 from ast import (
     FunctionDeclaration,
     ForLoopNode,
@@ -50,6 +51,8 @@ class Parser:
                 ast.append(self.parse_if_statement())
             elif self.current_token[0] == 'FOR':
                 ast.append(self.parse_for_loop())
+            elif self.current_token[0] == 'WHILE':  # Correct token checking for WHILE
+                ast.append(self.parse_while_loop())
             elif self.current_token[0].startswith('TYPE_'):
                 ast.append(self.parse_variable_declaration())
             elif self.current_token[0] == 'OUTPUT':
@@ -77,6 +80,9 @@ class Parser:
         elif self.current_token[0] == 'STRING_LITERAL':
             string = self.expect('STRING_LITERAL')[1]
             return OutputNode(StringLiteralNode(string))
+        elif self.current_token[0] == 'CHARACTER_LITERAL':
+            char = self.expect('CHARACTER_LITERAL')[1]
+            return OutputNode(CharacterNode(char))
         else:
             raise SyntaxError(f"Unexpected token {self.current_token[0]} in output")
 
@@ -129,7 +135,9 @@ class Parser:
     def parse_while_loop(self):
         self.expect('WHILE')
         condition = self.parse_expression()
+        print(f"Parsed WHILE condition: {condition}")
         body = self.parse_block()
+        print(f"Parsed WHILE body: {body}")
         return WhileLoopNode(condition, body)
 
     def parse_block(self):
@@ -152,8 +160,6 @@ class Parser:
                 block.append(self.parse_expression())
         self.expect('DEDENT')
         return block
-
-
 
     def parse_expression(self):
         expr = self.parse_primary_expression()
@@ -182,7 +188,6 @@ class Parser:
         else:
             raise SyntaxError(f"Unexpected token type {self.current_token[0]}")
 
-
     def peek(self):
         save_point = self.tokens
         next_token = next(save_point, None)
@@ -190,3 +195,17 @@ class Parser:
         return next_token[0] if next_token else None
 
 
+# Example usage
+if __name__ == "__main__":
+    code = '''integer int : 0
+integer limit : 5
+while int < limit
+    -> int
+    int++
+stop
+'''
+    lexer = Lexer(code)
+    tokens = lexer.tokenize()
+    parser = Parser(tokens)
+    ast = parser.parse()
+    print("AST:", ast)  # Output AST for review

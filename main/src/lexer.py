@@ -34,6 +34,7 @@ class Lexer:
             'POP_BACK': r'\bpop_back\b',
             'PUSH_BACK': r'\bpush_back\b',
             'DO': r'\bdo\b',
+            'NEW_LINE': r'\n',
             'IDENTIFIER': r'\b[a-zA-Z_][a-zA-Z0-9_]*\b',
             'INCREMENT': r'\+\+',
             'DECREMENT': r'--',
@@ -51,10 +52,10 @@ class Lexer:
             'OPEN_BRACE': r'\{',
             'CLOSE_BRACE': r'\}',
             'EQUAL': r':=',
-            'GREATER': r':>',
-            'LESS': r':<',
-            'GREATER_EQUAL': r':?>',
-            'LESS_EQUAL': r':?<',
+            'GREATER': r'>',
+            'LESS': r'<',
+            'GREATER_EQUAL': r':>',
+            'LESS_EQUAL': r':<',
             'NOT_EQUAL': r':!',
             'AND': r':&',
             'OR': r':\|',
@@ -91,11 +92,12 @@ class Lexer:
 # Example usage
 if __name__ == "__main__":
     code = '''integer int : 0
-integer count : 4
-for int to count
+integer limit : 5
+while int < limit
     -> int
-    ++int
-stop'''
+    int++
+stop
+'''
     lexer = Lexer(code)
     tokens = lexer.tokenize()
     print(tokens)  # Output tokens for review

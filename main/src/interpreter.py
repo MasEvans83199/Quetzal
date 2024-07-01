@@ -42,7 +42,7 @@ class Interpreter:
             result = self.visit(node)
             if result is not None:
                 results.append(result)
-        return '\n'.join(filter(None, results))
+        return '\n'.join(map(str, filter(None, results)))  # Ensure all results are strings
 
     def visit(self, node):
         print(f"Visiting: {type(node).__name__}")
@@ -60,34 +60,51 @@ class Interpreter:
                 result = self.visit(stmt)
                 if result is not None:
                     results.append(result)
-        return '\n'.join(results)
+        return '\n'.join(map(str, results))  # Ensure all results are strings
     
     def visit_WhileLoopNode(self, node):
+        results = []
         while self.visit(node.condition):
+            print(f"Condition {node.condition} evaluated to True")  # Debug print
             for stmt in node.body:
-                self.visit(stmt)
+                result = self.visit(stmt)
+                if result is not None:
+                    results.append(result)
+            print(f"End of WHILE loop iteration, environment: {self.environment}")  # Debug print
+        print(f"WHILE loop condition {node.condition} evaluated to False")  # Debug print
+        return '\n'.join(map(str, results))  # Ensure all results are strings
 
     def visit_IncrementNode(self, node):
         self.environment[node.identifier] += 1
+        print(f"Incremented {node.identifier}, new value: {self.environment[node.identifier]}")
 
     def visit_IfNode(self, node):
         condition_value = self.visit(node.condition)
+        results = []
         if condition_value:
             for stmt in node.then_block:
-                self.visit(stmt)
+                result = self.visit(stmt)
+                if result is not None:
+                    results.append(result)
         elif node.elif_blocks:
             for (cond, block) in node.elif_blocks:
                 if self.visit(cond):
                     for stmt in block:
-                        self.visit(stmt)
+                        result = self.visit(stmt)
+                        if result is not None:
+                            results.append(result)
                     break
         if not condition_value and node.else_block:
             for stmt in node.else_block:
-                self.visit(stmt)
+                result = self.visit(stmt)
+                if result is not None:
+                    results.append(result)
+        return '\n'.join(map(str, results))  # Ensure all results are strings
 
     def visit_BinaryOperatorNode(self, node):
         left_val = self.visit(node.left)
         right_val = self.visit(node.right)
+        print(f"Evaluating Binary Operator: {left_val} {node.operator} {right_val}")  # Debug print
         if node.operator == 'PLUS':
             return left_val + right_val
         elif node.operator == 'MINUS':
@@ -106,6 +123,8 @@ class Interpreter:
             return left_val >= right_val
         elif node.operator == 'LESS_EQUAL':
             return left_val <= right_val
+        elif node.operator == 'NOT_EQUAL':
+            return left_val != right_val
         else:
             raise Exception(f"Unsupported operator {node.operator}")
 
@@ -127,7 +146,7 @@ class Interpreter:
     def visit_OutputNode(self, node):
         output_value = self.visit(node.value)
         print(f"Output: {output_value}")
-        return str(output_value)
+        return str(output_value)  # Ensure the output value is converted to a string
 
     def visit_AssignNode(self, node):
         self.environment[node.name] = self.visit(node.expression)
@@ -148,7 +167,7 @@ class Interpreter:
 
     def visit_list(self, node_list):
         results = [self.visit(node) for node in node_list if node]
-        return ' '.join(results)
+        return ' '.join(map(str, results))  # Ensure all results are strings
 
     def no_visit_method(self, node):
         raise Exception(f'No visit_{type(node).__name__} method')
@@ -168,8 +187,8 @@ def run(code):
 
 # Example usage
 if __name__ == "__main__":
-    code = '''integer int : 0
-integer limit : 5
+    code = '''integer int : 1
+integer limit : 3
 while int < limit
     -> int
     int++
