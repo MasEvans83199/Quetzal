@@ -13,6 +13,8 @@ from ast import (
     NumberNode,
     VariableDeclarationNode,
     AssignNode,
+    ArrayDeclarationNode,
+    ArrayAccessNode,
     FunctionCallNode,
     OutputNode,
     VariableAccessNode,
@@ -88,12 +90,24 @@ class Interpreter:
         return '\n'.join(map(str, results))  # Ensure all results are strings
 
     def visit_IncrementNode(self, node):
-        self.environment[node.identifier] += 1
-        print(f"Incremented {node.identifier}, new value: {self.environment[node.identifier]}")
-        
+        if isinstance(node.identifier, ArrayAccessNode):
+            array = self.environment[node.identifier.name]
+            index = self.visit(node.identifier.index)
+            array[index] += 1
+            print(f"Incremented {node.identifier.name}[{index}], new value: {array[index]}")
+        else:
+            self.environment[node.identifier] += 1
+            print(f"Incremented {node.identifier}, new value: {self.environment[node.identifier]}")
+
     def visit_DecrementNode(self, node):
-        self.environment[node.identifier] -= 1
-        print(f"Decremented {node.identifier}, new value: {self.environment[node.identifier]}")
+        if isinstance(node.identifier, ArrayAccessNode):
+            array = self.environment[node.identifier.name]
+            index = self.visit(node.identifier.index)
+            array[index] -= 1
+            print(f"Decremented {node.identifier.name}[{index}], new value: {array[index]}")
+        else:
+            self.environment[node.identifier] -= 1
+            print(f"Decremented {node.identifier}, new value: {self.environment[node.identifier]}")
 
     def visit_IfNode(self, node):
         condition_value = self.visit(node.condition)
@@ -162,6 +176,27 @@ class Interpreter:
         self.environment[node.name] = evaluated_expression
         print(f"Declared: {node.name} = {evaluated_expression}")
         return f"Variable '{node.name}' set to {evaluated_expression}"
+    
+    def visit_ArrayDeclarationNode(self, node):
+        evaluated_elements = [self.visit(element) for element in node.elements]
+        self.environment[node.name] = evaluated_elements
+        print(f"Declared array: {node.name} = {evaluated_elements}")
+        return f"Array '{node.name}' set to {evaluated_elements}"
+
+    def visit_ArrayAccessNode(self, node):
+        array = self.environment[node.name]
+        index = self.visit(node.index)
+        return array[index]
+
+    def visit_ArrayAssignNode(self, node):
+        array = self.environment.get(node.array_name)
+        index = self.visit(node.index)
+        value = self.visit(node.value)
+        if array is not None and 0 <= index < len(array):
+            array[index] = value
+            print(f"Assigned {value} to {node.array_name}[{index}]")
+        else:
+            raise Exception(f"Array assignment out of bounds or array '{node.array_name}' not defined")
 
     def visit_OutputNode(self, node):
         output_value = self.visit(node.value)
@@ -206,10 +241,13 @@ def run(code):
         return f'Error: {str(e)}'
 
 if __name__ == "__main__":
-    code = '''integer int : 4
-    integer int2 : 3
-    double x : int / int2
--> x
+    code = '''
+array integer arr[8, 2, 3, 4, 5]
+array string strArr["Hello", "World"]
+while arr[0] < 10
+    -> strArr[1]
+    -> arr[0]
+    arr[0]++
 stop
 '''
     lexer = Lexer(code)

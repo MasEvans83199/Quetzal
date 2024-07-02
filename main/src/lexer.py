@@ -35,6 +35,7 @@ class Lexer:
             'PUSH_BACK': r'\bpush_back\b',
             'DO': r'\bdo\b',
             'UNTIL': r'\buntil\b',
+            'ARRAY': r'\barray\b',
             'NEW_LINE': r'\n',
             'IDENTIFIER': r'\b[a-zA-Z_][a-zA-Z0-9_]*\b',
             'INCREMENT': r'\+\+',
@@ -60,6 +61,8 @@ class Lexer:
             'CLOSE_PAREN': r'\)',
             'OPEN_BRACE': r'\{',
             'CLOSE_BRACE': r'\}',
+            'SQUARE_OPEN': r'\[',
+            'SQUARE_CLOSE': r'\]',
         }
 
         for line in self.source_code.split('\n'):
@@ -92,11 +95,10 @@ class Lexer:
 
 # Example usage
 if __name__ == "__main__":
-    code = '''integer int : 0
-integer limit : 5
-while int < limit
-    -> int
-    int++
+    code = '''integer int : 10
+string str : "Hello"
+while int > 4
+    -> str
 stop
 '''
     lexer = Lexer(code)

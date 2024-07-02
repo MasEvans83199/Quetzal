@@ -9,6 +9,8 @@ class FunctionDeclaration(Node):
         self.parameters = parameters
         self.body = body
 
+# Loops/Statements
+
 class IfNode(Node):
     """Represents an 'if' statement with optional 'elif' and 'else' blocks."""
     def __init__(self, condition, then_block, elif_blocks, else_block):
@@ -41,6 +43,8 @@ class BinaryOperatorNode(Node):
         self.left = left
         self.operator = operator
         self.right = right
+
+# Variables/Variable-Adjacent
 
 class NumberNode(Node):
     """Represents a numeric literal."""
@@ -83,7 +87,26 @@ class DoubleNode(Node):
         
     def __repr__(self):
         return f'DoubleNode(value={self.value})'
+    
+class ArrayDeclarationNode:
+    def __init__(self, array_type, name, elements):
+        self.array_type = array_type
+        self.name = name
+        self.elements = elements
         
+class ArrayAccessNode:
+    def __init__(self, name, index):
+        self.name = name
+        self.index = index
+        
+class ArrayAssignNode:
+    def __init__(self, array_name, index, value):
+        self.array_name = array_name
+        self.index = index
+        self.value = value
+        
+# Operators
+    
 class ExpressionNode(Node):
     def __init__(self, left, operator=None, right=None):
         self.left = left

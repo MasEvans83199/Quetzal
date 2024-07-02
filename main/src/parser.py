@@ -13,6 +13,9 @@ from ast import (
     StringLiteralNode,
     CharacterNode,
     DoubleNode,
+    ArrayDeclarationNode,
+    ArrayAccessNode,
+    ArrayAssignNode,
     ExpressionNode,
     OutputNode,
     VariableAccessNode,
@@ -58,6 +61,8 @@ class Parser:
                 ast.append(self.parse_do_while_loop())
             elif self.current_token[0].startswith('TYPE_'):
                 ast.append(self.parse_variable_declaration())
+            elif self.current_token[0] == 'ARRAY':
+                ast.append(self.parse_array_declaration())
             elif self.current_token[0] == 'OUTPUT':
                 ast.append(self.parse_output())
             elif self.current_token[0] == 'IDENTIFIER' and self.peek() == 'COLON':
@@ -69,16 +74,60 @@ class Parser:
         return ast
 
     def parse_variable_declaration(self):
+        if self.current_token[0] == 'ARRAY':
+            self.expect('ARRAY')
+            array_type = self.expect(self.current_token[0])[1]
+            name = self.expect('IDENTIFIER')[1]
+            self.expect('SQUARE_OPEN')
+            elements = []
+            while self.current_token[0] != 'SQUARE_CLOSE':
+                if self.current_token[0] in ['NUMBER', 'STRING_LITERAL', 'CHARACTER_LITERAL']:
+                    elements.append(self.parse_primary_expression())
+                if self.current_token[0] == 'COMMA':
+                    self.next_token()
+            self.expect('SQUARE_CLOSE')
+            return ArrayDeclarationNode(array_type, name, elements)
+        else:
+            type_token = self.expect(self.current_token[0])[0]
+            identifier = self.expect('IDENTIFIER')[1]
+            self.expect('COLON')
+            expression = self.parse_expression()
+            return VariableDeclarationNode(type_token[len('TYPE_'):].lower(), identifier, expression)
+    
+    def parse_array_declaration(self):
+        self.expect('ARRAY')
         type_token = self.expect(self.current_token[0])[0]
         identifier = self.expect('IDENTIFIER')[1]
-        self.expect('COLON')
-        expression = self.parse_expression()
-        return VariableDeclarationNode(type_token[len('TYPE_'):].lower(), identifier, expression)
+        self.expect('SQUARE_OPEN')
+        elements = []
+        while self.current_token[0] != 'SQUARE_CLOSE':
+            elements.append(self.parse_expression())
+            if self.current_token[0] == 'COMMA':
+                self.next_token()
+        self.expect('SQUARE_CLOSE')
+        return ArrayDeclarationNode(type_token[len('TYPE_'):].lower(), identifier, elements)
+    
+    def parse_array_access(self, identifier):
+        self.expect('SQUARE_OPEN')
+        index = self.parse_expression()
+        self.expect('SQUARE_CLOSE')
+        if self.current_token[0] == 'INCREMENT':
+            self.next_token()
+            return IncrementNode(ArrayAccessNode(identifier, index))
+        elif self.current_token[0] == 'DECREMENT':
+            self.next_token()
+            return DecrementNode(ArrayAccessNode(identifier, index))
+        return ArrayAccessNode(identifier, index)
 
     def parse_output(self):
         self.expect('OUTPUT')
         if self.current_token[0] == 'IDENTIFIER':
             identifier = self.expect('IDENTIFIER')[1]
+            if self.current_token and self.current_token[0] == 'SQUARE_OPEN':
+                self.expect('SQUARE_OPEN')
+                index = self.parse_expression()
+                self.expect('SQUARE_CLOSE')
+                return OutputNode(ArrayAccessNode(identifier, index))
             return OutputNode(VariableAccessNode(identifier))
         elif self.current_token[0] == 'STRING_LITERAL':
             string = self.expect('STRING_LITERAL')[1]
@@ -95,6 +144,13 @@ class Parser:
 
     def parse_assignment(self):
         identifier = self.expect('IDENTIFIER')[1]
+        if self.current_token and self.current_token[0] == 'SQUARE_OPEN':
+            self.expect('SQUARE_OPEN')
+            index = self.parse_expression()
+            self.expect('SQUARE_CLOSE')
+            self.expect('COLON')
+            value = self.parse_expression()
+            return ArrayAssignNode(identifier, index, value)
         self.expect('COLON')
         value = self.parse_expression()
         return AssignNode(identifier, value)
@@ -166,8 +222,14 @@ class Parser:
                 block.append(DecrementNode(identifier))
             elif self.current_token[0] == 'OUTPUT':
                 block.append(self.parse_output())
-            elif self.current_token[0].startswith('TYPE_'):
+            elif self.current_token[0].startswith('TYPE_') or self.current_token[0] == 'ARRAY':
                 block.append(self.parse_variable_declaration())
+            elif self.current_token[0] == 'IDENTIFIER':
+                identifier = self.expect('IDENTIFIER')[1]
+                if self.current_token[0] == 'SQUARE_OPEN':
+                    block.append(self.parse_array_access(identifier))
+                else:
+                    block.append(VariableAccessNode(identifier))
             else:
                 block.append(self.parse_expression())
         self.expect('DEDENT')
@@ -187,6 +249,11 @@ class Parser:
     def parse_primary_expression(self):
         if self.current_token[0] == 'IDENTIFIER':
             identifier = self.expect('IDENTIFIER')[1]
+            if self.current_token and self.current_token[0] == 'SQUARE_OPEN':
+                self.expect('SQUARE_OPEN')
+                index = self.parse_expression()
+                self.expect('SQUARE_CLOSE')
+                return ArrayAccessNode(identifier, index)
             if self.current_token and self.current_token[0] == 'INCREMENT':
                 self.next_token()  # Consume the INCREMENT token
                 return IncrementNode(identifier)
@@ -200,6 +267,9 @@ class Parser:
         elif self.current_token[0] == 'FLOAT_LITERAL':
             float_number = float(self.expect('FLOAT_LITERAL')[1])
             return DoubleNode(float_number)
+        elif self.current_token[0] == 'STRING_LITERAL':
+            string = self.expect('STRING_LITERAL')[1]
+            return StringLiteralNode(string)
         elif self.current_token[0] == 'CHARACTER_LITERAL':
             char = self.expect('CHARACTER_LITERAL')[1]
             return CharacterNode(char)
