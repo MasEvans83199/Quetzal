@@ -73,10 +73,27 @@ class Interpreter:
             print(f"End of WHILE loop iteration, environment: {self.environment}")  # Debug print
         print(f"WHILE loop condition {node.condition} evaluated to False")  # Debug print
         return '\n'.join(map(str, results))  # Ensure all results are strings
+    
+    def visit_DoWhileNode(self, node):
+        results = []
+        while True:
+            for stmt in node.body:
+                result = self.visit(stmt)
+                if result is not None:
+                    results.append(result)
+            if not self.visit(node.condition):
+                break
+            print(f"End of DO-WHILE loop iteration, environment: {self.environment}")  # Debug print
+        print(f"DO-WHILE loop condition {node.condition} evaluated to False")  # Debug print
+        return '\n'.join(map(str, results))  # Ensure all results are strings
 
     def visit_IncrementNode(self, node):
         self.environment[node.identifier] += 1
         print(f"Incremented {node.identifier}, new value: {self.environment[node.identifier]}")
+        
+    def visit_DecrementNode(self, node):
+        self.environment[node.identifier] -= 1
+        print(f"Decremented {node.identifier}, new value: {self.environment[node.identifier]}")
 
     def visit_IfNode(self, node):
         condition_value = self.visit(node.condition)
@@ -185,19 +202,20 @@ def run(code):
         print(f"Error during interpretation: {e}")
         return f'Error: {str(e)}'
 
-# Example usage
 if __name__ == "__main__":
-    code = '''integer int : 1
-integer limit : 3
-while int < limit
+    code = '''integer int : 10
+do
     -> int
-    int++
+    int--
+while int :> 5
 stop
 '''
     lexer = Lexer(code)
     tokens = lexer.tokenize()
     parser = Parser(tokens)
     ast = parser.parse()
+    print("AST:", ast)  # Output AST for review
     interpreter = Interpreter(parser)
     result = interpreter.interpret(ast)
     print(result)
+

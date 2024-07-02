@@ -53,6 +53,8 @@ class Parser:
                 ast.append(self.parse_for_loop())
             elif self.current_token[0] == 'WHILE':  # Correct token checking for WHILE
                 ast.append(self.parse_while_loop())
+            elif self.current_token[0] == 'DO':
+                ast.append(self.parse_do_while_loop())
             elif self.current_token[0].startswith('TYPE_'):
                 ast.append(self.parse_variable_declaration())
             elif self.current_token[0] == 'OUTPUT':
@@ -139,6 +141,15 @@ class Parser:
         body = self.parse_block()
         print(f"Parsed WHILE body: {body}")
         return WhileLoopNode(condition, body)
+    
+    def parse_do_while_loop(self):
+        self.expect('DO')
+        body = self.parse_block()
+        self.expect('WHILE')
+        condition = self.parse_expression()
+        print(f"Parsed DO-WHILE body: {body}")
+        print(f"Parsed DO-WHILE condition: {condition}")
+        return DoWhileNode(body, condition)
 
     def parse_block(self):
         block = []
@@ -195,13 +206,12 @@ class Parser:
         return next_token[0] if next_token else None
 
 
-# Example usage
 if __name__ == "__main__":
-    code = '''integer int : 0
-integer limit : 5
-while int < limit
+    code = '''integer int : 10
+do
     -> int
-    int++
+    int--
+while int :> 5
 stop
 '''
     lexer = Lexer(code)

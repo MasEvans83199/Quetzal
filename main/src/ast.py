@@ -25,10 +25,10 @@ class WhileLoopNode(Node):
 
 class DoWhileNode(Node):
     """Represents a 'do-while' loop."""
-    def __init__(self, condition, body):
-        self.condition = condition
+    def __init__(self, body, condition):
         self.body = body
-
+        self.condition = condition
+        
 class ForLoopNode:
     def __init__(self, identifier, end_value, body):
         self.identifier = identifier
