@@ -153,6 +153,9 @@ class Interpreter:
 
     def visit_CharacterNode(self, node):
         return node.value
+    
+    def visit_DoubleNode(self, node):
+        return node.value
 
     def visit_VariableDeclarationNode(self, node):
         evaluated_expression = self.visit(node.expression)
@@ -203,19 +206,16 @@ def run(code):
         return f'Error: {str(e)}'
 
 if __name__ == "__main__":
-    code = '''integer int : 10
-do
-    -> int
-    int--
-while int :> 5
+    code = '''integer int : 4
+    integer int2 : 3
+    double x : int / int2
+-> x
 stop
 '''
     lexer = Lexer(code)
     tokens = lexer.tokenize()
     parser = Parser(tokens)
     ast = parser.parse()
-    print("AST:", ast)  # Output AST for review
     interpreter = Interpreter(parser)
     result = interpreter.interpret(ast)
     print(result)
-

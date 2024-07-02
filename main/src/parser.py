@@ -12,6 +12,7 @@ from ast import (
     FunctionCallNode,
     StringLiteralNode,
     CharacterNode,
+    DoubleNode,
     ExpressionNode,
     OutputNode,
     VariableAccessNode,
@@ -196,6 +197,12 @@ class Parser:
         elif self.current_token[0] == 'NUMBER':
             number = int(self.expect('NUMBER')[1])
             return NumberNode(number)
+        elif self.current_token[0] == 'FLOAT_LITERAL':
+            float_number = float(self.expect('FLOAT_LITERAL')[1])
+            return DoubleNode(float_number)
+        elif self.current_token[0] == 'CHARACTER_LITERAL':
+            char = self.expect('CHARACTER_LITERAL')[1]
+            return CharacterNode(char)
         else:
             raise SyntaxError(f"Unexpected token type {self.current_token[0]}")
 

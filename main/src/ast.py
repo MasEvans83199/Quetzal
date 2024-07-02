@@ -76,6 +76,14 @@ class CharacterNode(Node):
         # Ensure the character is stored without surrounding quotes
         self.value = value.strip("'")
         
+class DoubleNode(Node):
+    """Represents a double literal"""
+    def __init__(self, value):
+        self.value = value
+        
+    def __repr__(self):
+        return f'DoubleNode(value={self.value})'
+        
 class ExpressionNode(Node):
     def __init__(self, left, operator=None, right=None):
         self.left = left
